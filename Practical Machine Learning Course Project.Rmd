@@ -1,0 +1,108 @@
+---
+title: "Practical Machine Learning Course Project"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Practical Machine Learning Course Project
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases. 
+
+First, lets load our libraries and load our data
+```{r libraries, echo=T, results='hide'}
+library(caret)
+library(ggplot2)
+library(rpart)
+library(rattle)
+library(randomForest)
+
+training <- read.csv('/Users/daniel/Desktop/Practical Machine Learning Course Project/training data.csv')
+testing <- read.csv('/Users/daniel/Desktop/Practical Machine Learning Course Project/test data.csv')
+
+```
+
+# Cleaning Data
+Lets Keep the columns that have no NAs and remove the rest
+```{r cleaning1}
+training <- training[,colSums(is.na(training))==0]
+```
+
+Lets also remove the first seven columns, as they just are for identification purposes
+```{r cleaning2}
+training <- training[,-c(1:7)]
+```
+
+Finally, lets remove variables that have a majority of values near zero
+```{r cleaning3}
+nz <- nearZeroVar(training)
+training <- training[, -nz]
+```
+
+Now we can start training our prediction models, lets split the data into training and test parts
+```{r datapartition}
+trainingset <- createDataPartition(training$classe, p=.7, list = FALSE)
+train <- training[trainingset, ]
+test <- training[-trainingset, ]
+
+##Confirming number of rows for correct partitioning, and number of columns for same column count
+c(nrow(train), ncol(train))
+c(nrow(test), ncol(test))
+```
+
+# Decision Trees
+Our first model will be with Decision Trees
+```{r decisiontree}
+set.seed(15000)
+modFit1 <- train(classe~., data=train, method="rpart")
+
+print(modFit1$finalModel)
+```
+
+Plotting a Dendogram and the results, we get
+```{r decisiontreeplot}
+fancyRpartPlot(modFit1$finalModel)
+plot(modFit1)
+```
+
+We have a model, lets compare results to the test data
+```{r decisiontreetest}
+predict1 <- predict(modFit1, newdata=test)
+confusionMatrix(predict1, as.factor(test$classe))
+```
+Unfortunately, results show the Accuracy as only .4802 which is low. Time to try a different algorithm
+
+# Boosting
+```{r boosting, echo=T, results='hide'}
+set.seed(15000)
+modFit2 <- train(classe~., data=train, method="gbm")
+```
+
+Plotting our accuracy, we get
+```{r boostingplot}
+plot(modFit2)
+```
+
+lets compare results to the test dataset
+```{r boostingtest}
+##Comparing results to the test data for Boosting
+predict2 <- predict(modFit2, newdata=test)
+confusionMatrix(predict2, as.factor(test$classe))
+```
+Results show the Accuracy is much higher at .963, so we will use this algorithm for our testing dataset.
+
+# Results
+From our two models, we can see that Boosting has much higher accuracy than Random Forests. The results are:
+Boosting has .963 accuracy and .037 out of sample.
+Decision Tree has .4802 accuracy and .5198 out of sample.
+
+# Prediction
+```{r finalprediction}
+predict(modFit2, newdata=testing)
+```
