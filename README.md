@@ -2,4 +2,6 @@
 
 Project for Machine Learning
 
-The pdf file is the final result. HTML File is too large to paste into here.
+The HTML is zipped to fit on the repository.
+
+The pdf file is also available with the same results for alternative viewing.
